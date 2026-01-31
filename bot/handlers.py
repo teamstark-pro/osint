@@ -208,3 +208,27 @@ async def broadcast_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"🚫 Blocked/Failed: {blocked}\n"
         f"📊 Total: {total}"
     )
+
+# ... (inside bot/handlers.py)
+
+async def cmd_aadhar(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not await validate_request(update, context): return
+    
+    args = context.args
+    if not args:
+        return await update.message.reply_text("Usage: `/aadhar <number>`", parse_mode=ParseMode.MARKDOWN)
+    
+    msg = await update.message.reply_text("🔄 Fetching Aadhar details...")
+    response = await api_handlers.handle_aadhar(args[0])
+    await msg.edit_text(response, parse_mode=ParseMode.MARKDOWN)
+
+async def cmd_upi(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not await validate_request(update, context): return
+    
+    args = context.args
+    if not args:
+        return await update.message.reply_text("Usage: `/upi <upi_id>`", parse_mode=ParseMode.MARKDOWN)
+    
+    msg = await update.message.reply_text("🔄 Fetching UPI details...")
+    response = await api_handlers.handle_upi(args[0])
+    await msg.edit_text(response, parse_mode=ParseMode.MARKDOWN)
