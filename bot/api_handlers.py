@@ -74,7 +74,7 @@ async def handle_pic(number):
 
 # --- API 4: Vehicle ---
 async def handle_vnum(vnum):
-    url = f"http://13.53.42.188:1689/?key=ayushgandu&regnum={vnum}"
+    url = f"https://vehicle-info-aco-api.vercel.app/info?vehicle={vnum}"
     data = await fetch(url)
     
     if not data:
