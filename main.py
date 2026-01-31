@@ -21,6 +21,8 @@ def main():
     application.add_handler(CommandHandler("num", handlers.cmd_num))
     application.add_handler(CommandHandler("pic", handlers.cmd_pic))
     application.add_handler(CommandHandler("vnum", handlers.cmd_vnum))
+    application.add_handler(CommandHandler("aadhar", handlers.cmd_aadhar))
+    application.add_handler(CommandHandler("upi", handlers.cmd_upi))
 
     # 3. Run Forever (Polling)
     print("✅ Bot is polling...")
