@@ -83,3 +83,37 @@ async def handle_vnum(vnum):
     if isinstance(data, dict):
         return json.dumps(data, indent=2) + Config.FOOTER
     return str(data) + Config.FOOTER
+
+# --- API 5: Aadhar ---
+async def handle_aadhar(uid):
+    # Hidden API
+    url = f"https://api.b77bf911.workers.dev/aadhaar?id={uid}"
+    data = await fetch(url)
+    
+    if not data:
+        return "❌ Error fetching data."
+
+    # Format as Monospace JSON (Click to Copy)
+    if isinstance(data, dict):
+        formatted_json = json.dumps(data, indent=2)
+    else:
+        formatted_json = str(data)
+        
+    return f"```json\n{formatted_json}\n```" + Config.FOOTER
+
+# --- API 6: UPI ---
+async def handle_upi(upi_id):
+    # Hidden API
+    url = f"https://api.b77bf911.workers.dev/upi?id={upi_id}"
+    data = await fetch(url)
+    
+    if not data:
+        return "❌ Error fetching data."
+
+    # Format as Monospace JSON (Click to Copy)
+    if isinstance(data, dict):
+        formatted_json = json.dumps(data, indent=2)
+    else:
+        formatted_json = str(data)
+
+    return f"```json\n{formatted_json}\n```" + Config.FOOTER
