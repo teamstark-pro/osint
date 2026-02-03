@@ -35,7 +35,7 @@ async def handle_tg(uid):
 
 # --- API 2: Number Info ---
 async def handle_num(number):
-    url = f"https://api.b77bf911.workers.dev/mobile?number={number}"
+    url = f"https://encorexapi.vercel.app/num?num={number}"
     data = await fetch(url)
     
     if not data:
