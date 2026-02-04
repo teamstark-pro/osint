@@ -19,7 +19,7 @@ async def fetch(url):
 
 # --- API 1: TG Info ---
 async def handle_tg(uid):
-    url = f"https://encorexapi.vercel.app/ayushi?tgid={uid}"
+    url = f"https://api.b77bf911.workers.dev/telegram?user={uid}"
     data = await fetch(url)
     
     if not data:
