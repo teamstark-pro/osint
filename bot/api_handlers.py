@@ -74,7 +74,7 @@ async def handle_pic(number):
 
 # --- API 4: Vehicle ---
 async def handle_vnum(vnum):
-    url = f"https://api.b77bf911.workers.dev/v2?query=UP84AB5162{vnum}"
+    url = f"https://api.b77bf911.workers.dev/v2?query={vnum}"
     data = await fetch(url)
     
     if not data:
