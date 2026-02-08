@@ -53,7 +53,7 @@ async def handle_num(number):
     # If too long, return as file
     if len(text_data) > 3500:
         file = io.BytesIO(text_data.encode())
-        file.name = f"{number}_info.json"
+        file.name = f"```json\n{text_data}\n```"
         return header + "⚠️ Data too long, sent as file." + Config.FOOTER, file
     else:
         return header + text_data + Config.FOOTER, None
