@@ -19,7 +19,7 @@ async def fetch(url):
 
 # --- API 1: TG Info ---
 async def handle_tg(uid):
-    url = f"https://encorexapi.vercel.app/ayushi?tgid={uid}"
+    url = f"https://encorexapi.vercel.app/ayushgendutg?id={uid}"
     data = await fetch(url)
     
     if not data:
@@ -87,7 +87,7 @@ async def handle_vnum(vnum):
 # --- API 5: Aadhar ---
 async def handle_aadhar(uid):
     # Hidden API
-    url = f"https://api.b77bf911.workers.dev/aadhaar?id={uid}"
+    url = f"https://encorexapi.vercel.app/adharayu?adr=value{uid}"
     data = await fetch(url)
     
     if not data:
