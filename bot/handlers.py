@@ -1,4 +1,5 @@
 import logging
+import asyncio
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.constants import ParseMode, ChatType
 from telegram.ext import ContextTypes
@@ -11,6 +12,22 @@ from bot import api_handlers
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# --- Helper: Auto Delete Messages ---
+async def auto_delete(user_msg, bot_msg, delay=30):
+    """Waits for 'delay' seconds, then deletes both messages."""
+    await asyncio.sleep(delay)
+    try:
+        if user_msg:
+            await user_msg.delete()
+    except Exception as e:
+        logger.warning(f"Failed to delete user msg: {e}")
+        
+    try:
+        if bot_msg:
+            await bot_msg.delete()
+    except Exception as e:
+        logger.warning(f"Failed to delete bot msg: {e}")
 
 # --- Helper: Check Force Subscribe ---
 async def check_fsub(update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
@@ -133,6 +150,9 @@ async def cmd_tg(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = await update.message.reply_text("🔄 Fetching TG info...")
     response = await api_handlers.handle_tg(args[0])
     await msg.edit_text(response, parse_mode=ParseMode.MARKDOWN)
+    
+    # Auto-delete after 30 seconds
+    asyncio.create_task(auto_delete(update.message, msg, delay=30))
 
 async def cmd_num(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await validate_request(update, context): return
@@ -145,16 +165,21 @@ async def cmd_num(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     if file_resp:
         try:
-            await update.message.reply_document(
+            sent_doc = await update.message.reply_document(
                 document=file_resp, 
                 caption=text_resp[:1000], 
                 parse_mode=ParseMode.MARKDOWN
             )
-            await msg.delete()
+            await msg.delete() # Delete the initial "fetching" message
+            # Delete user command and the document message after 30s
+            asyncio.create_task(auto_delete(update.message, sent_doc, delay=30))
         except Exception as e:
             await msg.edit_text(f"❌ Error sending file: {e}")
+            asyncio.create_task(auto_delete(update.message, msg, delay=30))
     else:
         await msg.edit_text(text_resp, parse_mode=ParseMode.MARKDOWN)
+        # Delete user command and the text message after 30s
+        asyncio.create_task(auto_delete(update.message, msg, delay=30))
 
 async def cmd_pic(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await validate_request(update, context): return
@@ -165,6 +190,8 @@ async def cmd_pic(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = await update.message.reply_text("🔄 Fetching Pic info...")
     response = await api_handlers.handle_pic(args[0])
     await msg.edit_text(response)
+    
+    asyncio.create_task(auto_delete(update.message, msg, delay=30))
 
 async def cmd_vnum(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await validate_request(update, context): return
@@ -175,6 +202,34 @@ async def cmd_vnum(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = await update.message.reply_text("🔄 Fetching Vehicle info...")
     response = await api_handlers.handle_vnum(args[0])
     await msg.edit_text(response)
+    
+    asyncio.create_task(auto_delete(update.message, msg, delay=30))
+
+async def cmd_aadhar(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not await validate_request(update, context): return
+    
+    args = context.args
+    if not args:
+        return await update.message.reply_text("Usage: `/aadhar <number>`", parse_mode=ParseMode.MARKDOWN)
+    
+    msg = await update.message.reply_text("🔄 Fetching Aadhar details...")
+    response = await api_handlers.handle_aadhar(args[0])
+    await msg.edit_text(response, parse_mode=ParseMode.MARKDOWN)
+    
+    asyncio.create_task(auto_delete(update.message, msg, delay=30))
+
+async def cmd_upi(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not await validate_request(update, context): return
+    
+    args = context.args
+    if not args:
+        return await update.message.reply_text("Usage: `/upi <upi_id>`", parse_mode=ParseMode.MARKDOWN)
+    
+    msg = await update.message.reply_text("🔄 Fetching UPI details...")
+    response = await api_handlers.handle_upi(args[0])
+    await msg.edit_text(response, parse_mode=ParseMode.MARKDOWN)
+    
+    asyncio.create_task(auto_delete(update.message, msg, delay=30))
 
 async def broadcast_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id != Config.OWNER_ID: return
@@ -208,27 +263,3 @@ async def broadcast_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"🚫 Blocked/Failed: {blocked}\n"
         f"📊 Total: {total}"
     )
-
-# ... (inside bot/handlers.py)
-
-async def cmd_aadhar(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not await validate_request(update, context): return
-    
-    args = context.args
-    if not args:
-        return await update.message.reply_text("Usage: `/aadhar <number>`", parse_mode=ParseMode.MARKDOWN)
-    
-    msg = await update.message.reply_text("🔄 Fetching Aadhar details...")
-    response = await api_handlers.handle_aadhar(args[0])
-    await msg.edit_text(response, parse_mode=ParseMode.MARKDOWN)
-
-async def cmd_upi(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not await validate_request(update, context): return
-    
-    args = context.args
-    if not args:
-        return await update.message.reply_text("Usage: `/upi <upi_id>`", parse_mode=ParseMode.MARKDOWN)
-    
-    msg = await update.message.reply_text("🔄 Fetching UPI details...")
-    response = await api_handlers.handle_upi(args[0])
-    await msg.edit_text(response, parse_mode=ParseMode.MARKDOWN)
