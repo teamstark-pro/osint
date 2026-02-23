@@ -25,13 +25,16 @@ async def handle_tg(uid):
     if not data:
         return "❌ Error fetching data."
 
-    # Remove credits as requested
-    if isinstance(data, dict) and "credit" in data:
-        del data["credit"]
+    # Remove all variations of credits
+    if isinstance(data, dict):
+        data.pop("credit", None)
+        data.pop("api by", None)
+        data.pop("API BY", None)
+        data.pop("Owner", None)
     
     # Format as Monospace JSON
     formatted_json = json.dumps(data, indent=2)
-    return f"```json\n{formatted_json}\n```" + Config.FOOTER
+    return f"```json\n{formatted_json}\n```\n" + Config.FOOTER
 
 # --- API 2: Number Info ---
 async def handle_num(number):
@@ -44,8 +47,11 @@ async def handle_num(number):
     # Header with Mobile Number
     header = f"📱 **Target:** `{number}`\n\n"
     
-    # Convert to string for length check
+    # Remove credits
     if isinstance(data, dict):
+        data.pop("API BY", None)
+        data.pop("api by", None)
+        data.pop("Owner", None)
         text_data = json.dumps(data, indent=2)
     else:
         text_data = str(data)
@@ -53,10 +59,11 @@ async def handle_num(number):
     # If too long, return as file
     if len(text_data) > 3500:
         file = io.BytesIO(text_data.encode())
-        file.name = f"```json\n{text_data}\n```"
-        return header + "⚠️ Data too long, sent as file." + Config.FOOTER, file
+        file.name = "result.json" # Fixed filename bug
+        return header + "⚠️ Data too long, sent as file.\n" + Config.FOOTER, file
     else:
-        return header + text_data + Config.FOOTER, None
+        # Formatted as monospace JSON!
+        return header + f"```json\n{text_data}\n```\n" + Config.FOOTER, None
 
 # --- API 3: Pic ---
 async def handle_pic(number):
@@ -93,13 +100,17 @@ async def handle_aadhar(uid):
     if not data:
         return "❌ Error fetching data."
 
-    # Format as Monospace JSON (Click to Copy)
+    # Remove all variations of credits
     if isinstance(data, dict):
+        data.pop("api by", None)
+        data.pop("API BY", None)
+        data.pop("Owner", None)
+        data.pop("credit", None)
         formatted_json = json.dumps(data, indent=2)
     else:
         formatted_json = str(data)
         
-    return f"```json\n{formatted_json}\n```" + Config.FOOTER
+    return f"```json\n{formatted_json}\n```\n" + Config.FOOTER
 
 # --- API 6: UPI ---
 async def handle_upi(upi_id):
@@ -116,4 +127,4 @@ async def handle_upi(upi_id):
     else:
         formatted_json = str(data)
 
-    return f"```json\n{formatted_json}\n```" + Config.FOOTER
+    return f"```json\n{formatted_json}\n```\n" + Config.FOOTER
