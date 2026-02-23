@@ -29,7 +29,7 @@ async def handle_tg(uid):
     if isinstance(data, dict):
         data.pop("credit", None)
         data.pop("api by", None)
-        data.pop("API BY", None)
+        data.pop("_powered_by", None)
         data.pop("Owner", None)
     
     # Format as Monospace JSON
