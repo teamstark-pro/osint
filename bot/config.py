@@ -13,4 +13,4 @@ class Config:
     # Example in .env: FORCE_SUB_CHANNELS="@mychannel1 @mychannel2"
     FORCE_SUB_CHANNELS = os.getenv("FORCE_SUB_CHANNELS", "").split()
 
-    FOOTER = "\n\n━━━━━━━━━━━━━━━━━━\n🤖 bot by internaldarksoul.t.me and frappeash.t.me"
+    FOOTER = "\n\n━━━━━━━━━━━━━━━━━━\n🤖 bot by internaldarksoul.t.me"
