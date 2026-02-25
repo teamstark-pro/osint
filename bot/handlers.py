@@ -200,10 +200,28 @@ async def cmd_vnum(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return await update.message.reply_text("Usage: `/vnum <vehicle_no>`", parse_mode=ParseMode.MARKDOWN)
     
     msg = await update.message.reply_text("🔄 Fetching Vehicle info...")
-    response = await api_handlers.handle_vnum(args[0])
-    await msg.edit_text(response)
     
-    asyncio.create_task(auto_delete(update.message, msg, delay=30))
+    # Yahan tuple ko unpack kar rahe hain (text_resp aur file_resp)
+    text_resp, file_resp = await api_handlers.handle_vnum(args[0])
+    
+    # Agar data lamba hai aur file return hui hai
+    if file_resp:
+        try:
+            sent_doc = await update.message.reply_document(
+                document=file_resp, 
+                caption=text_resp[:1000], 
+                parse_mode=ParseMode.MARKDOWN
+            )
+            await msg.delete() # Purana "Fetching..." message delete kar do
+            # 30 sec baad command aur document dono delete
+            asyncio.create_task(auto_delete(update.message, sent_doc, delay=30))
+        except Exception as e:
+            await msg.edit_text(f"❌ Error sending file: {e}")
+            asyncio.create_task(auto_delete(update.message, msg, delay=30))
+    # Agar data chota hai aur as a normal text return hua hai
+    else:
+        await msg.edit_text(text_resp, parse_mode=ParseMode.MARKDOWN)
+        asyncio.create_task(auto_delete(update.message, msg, delay=30))
 
 async def cmd_aadhar(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await validate_request(update, context): return
