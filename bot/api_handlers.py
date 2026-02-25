@@ -80,16 +80,29 @@ async def handle_pic(number):
     return str(data) + Config.FOOTER
 
 # --- API 4: Vehicle ---
+# --- API 4: Vehicle ---
 async def handle_vnum(vnum):
     url = f"https://api.b77bf911.workers.dev/v2?query={vnum}"
     data = await fetch(url)
     
     if not data:
-        return "❌ Error."
+        return "❌ Error fetching vehicle info.", None
 
-    if isinstance(data, dict):
-        return json.dumps(data, indent=2) + Config.FOOTER
-    return str(data) + Config.FOOTER
+    # Handle both dict and list for proper JSON formatting
+    if isinstance(data, (dict, list)):
+        text_data = json.dumps(data, indent=2)
+    else:
+        text_data = str(data)
+
+    header = f"🚗 **Vehicle:** `{vnum}`\n\n"
+
+    # Telegram message length limit check
+    if len(text_data) > 3500:
+        file = io.BytesIO(text_data.encode())
+        file.name = f"{vnum}_details.json" 
+        return header + "⚠️ Data too long, sent as file.\n" + Config.FOOTER, file
+    else:
+        return header + f"```json\n{text_data}\n```\n" + Config.FOOTER, None
 
 # --- API 5: Aadhar ---
 async def handle_aadhar(uid):
