@@ -80,10 +80,10 @@ async def check_fsub(update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool
     return True
 
 # --- Middleware: Check Group & Authorization ---
-async def check_chat_auth(update: Update) -> bool:
+async def check_chat_auth(update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
     """
     Verifies if the bot is allowed to run in this chat.
-    BLOCKS Private DMs for normal users.
+    BLOCKS Private DMs for normal users and ALLOWS ALL Groups.
     """
     chat_id = update.effective_chat.id
     user_id = update.effective_user.id
@@ -91,42 +91,36 @@ async def check_chat_auth(update: Update) -> bool:
 
     # 1. ALLOW Owner (Anywhere: DM or Groups)
     if user_id == Config.OWNER_ID:
-        # Still log them if it's a DM, or log the group if it's a group
         if chat_type == ChatType.PRIVATE:
             await db.add_user(user_id)
         else:
             await db.add_group(chat_id)
         return True
 
-    # 2. BLOCK Private DMs for everyone else
+    # 2. BLOCK Private DMs for everyone else & give "Add to Group" button
     if chat_type == ChatType.PRIVATE:
+        bot = context.bot
+        keyboard = [
+            [InlineKeyboardButton("➕ Add to Group", url=f"https://t.me/{bot.username}?startgroup=true")]
+        ]
         await update.message.reply_text(
-            f"⚠️ **I am not active in DMs!**\n\nUse me in the official group: {Config.INVITE_LINK}",
-            disable_web_page_preview=True
+            "⚠️ **I don't work in DMs!**\n\nPlease add me to any group to use my commands.",
+            reply_markup=InlineKeyboardMarkup(keyboard),
+            parse_mode=ParseMode.MARKDOWN
         )
         return False
 
-    # 3. ALLOW Official Groups
-    if chat_id in Config.OFFICIAL_GROUPS:
+    # 3. ALLOW ALL Groups & Supergroups
+    if chat_type in [ChatType.GROUP, ChatType.SUPERGROUP]:
         await db.add_group(chat_id)
         await db.add_user(user_id) # Log user even in group
         return True
 
-    # 4. BLOCK Unauthorized Groups
-    try:
-        await update.message.reply_text(
-            f"⚠️ **I am not active here!**\n\nUse me in the official group: {Config.INVITE_LINK}",
-            disable_web_page_preview=True
-        )
-        await update.message.chat.leave()
-    except Exception as e:
-        logger.warning(f"Could not leave chat {chat_id}: {e}")
-        
     return False
 
 # --- Combined Validator ---
 async def validate_request(update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
-    if not await check_chat_auth(update):
+    if not await check_chat_auth(update, context): 
         return False
     if not await check_fsub(update, context):
         return False
@@ -135,11 +129,18 @@ async def validate_request(update: Update, context: ContextTypes.DEFAULT_TYPE) -
 # --- Command Handlers ---
 
 async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # Only reply to start if it passes the check (Owner or Official Group)
     if not await validate_request(update, context): return
-    await update.message.reply_text(
-        f"👋 Welcome! I am online.\n\nUse /tg, /num, /pic, or /vnum to search.{Config.FOOTER}"
-    )
+    
+    chat_type = update.effective_chat.type
+    if chat_type in [ChatType.GROUP, ChatType.SUPERGROUP]:
+        await update.message.reply_text(
+            f"👋 Hello Group Members! I am online.\n\nUse /tg, /num, /pic, or /vnum to search.{Config.FOOTER}"
+        )
+    else:
+        # For Owner in DM
+        await update.message.reply_text(
+            f"👋 Welcome Boss! I am online.\n\nUse /tg, /num, /pic, or /vnum to search.{Config.FOOTER}"
+        )
 
 async def cmd_tg(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await validate_request(update, context): return
