@@ -5,6 +5,7 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.constants import ParseMode, ChatType
 from telegram.ext import ContextTypes
 from telegram.error import BadRequest, Forbidden
+from telegram.helpers import escape_markdown
 
 from bot.config import Config
 from bot.database import db
@@ -333,7 +334,6 @@ async def cmd_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await msg.edit_text("❌ Failed to fetch statistics.")
 
 async def cmd_groups(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # Sirf Owner ko access milega
     if update.effective_user.id != Config.OWNER_ID:
         return await update.message.reply_text("⚠️ You are not authorized to use this command.")
 
@@ -350,29 +350,35 @@ async def cmd_groups(update: Update, context: ContextTypes.DEFAULT_TYPE):
             chat = await context.bot.get_chat(chat_id)
             title = chat.title or "Unknown Group"
             
-            # Link nikalne ka try karega
             if chat.username:
-                link = f"https://t.me/{chat.username}" # Public group
+                link = f"https://t.me/{chat.username}" 
             elif chat.invite_link:
-                link = chat.invite_link # Agar pehle se link available hai
+                link = chat.invite_link 
             else:
-                # Agar private group hai toh link generate karne ka try karega
                 try:
                     link = await context.bot.export_chat_invite_link(chat_id)
                 except Exception:
-                    link = "No Link (Bot needs admin rights to generate link)"
+                    link = "No Link (Bot needs admin rights)"
 
-            text_data += f"📌 **Name:** {title}\n🆔 **ID:** `{chat_id}`\n🔗 **Link:** {link}\n\n"
+            # Ye lines title aur link se dangerous Markdown characters hatayengi/escape karengi
+            # version=1 is important if you are using ParseMode.MARKDOWN
+            safe_title = escape_markdown(title, version=1)
+            safe_link = escape_markdown(link, version=1)
+
+            text_data += f"📌 **Name:** {safe_title}\n🆔 **ID:** `{chat_id}`\n🔗 **Link:** {safe_link}\n\n"
             
         except Exception as e:
-            text_data += f"📌 **ID:** `{chat_id}`\n⚠️ Error fetching details: {e}\n\n"
+            text_data += f"📌 **ID:** `{chat_id}`\n⚠️ Error fetching details: `Error`\n\n"
 
-    # Agar data chhota hai toh normal message
-    if len(text_data) < 4000:
-        await msg.edit_text(text_data, parse_mode=ParseMode.MARKDOWN, disable_web_page_preview=True)
+    # Telegram limit se bachne ke liye thoda margin rakha hai (4000 ki jagah 3500)
+    if len(text_data) < 3500:
+        try:
+            await msg.edit_text(text_data, parse_mode=ParseMode.MARKDOWN, disable_web_page_preview=True)
+        except Exception as e:
+            logger.error(f"Error editing text: {e}")
+            await msg.edit_text("❌ Error sending message due to formatting. Check logs.")
     else:
-        # Agar data lamba hai toh Text file bhej dega
-        text_data = text_data.replace("**", "").replace("`", "") # File ke liye markdown hata do
+        text_data = text_data.replace("**", "").replace("`", "").replace("\\", "")
         file_data = io.BytesIO(text_data.encode('utf-8'))
         file_data.name = "groups_list.txt"
         await update.message.reply_document(
