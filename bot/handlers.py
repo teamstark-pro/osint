@@ -282,3 +282,32 @@ async def broadcast_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"🚫 Blocked/Failed: {blocked}\n"
         f"📊 Total: {total}"
     )
+
+
+async def cmd_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    # Sirf Owner ko stats dekhne ka access milega
+    if update.effective_user.id != Config.OWNER_ID:
+        return await update.message.reply_text("⚠️ You are not authorized to use this command.")
+
+    msg = await update.message.reply_text("🔄 Fetching statistics...")
+
+    try:
+        # Database se saare users aur groups nikal rahe hain
+        users = await db.get_all_users()
+        groups = await db.get_all_groups()
+
+        total_users = len(users)
+        total_groups = len(groups)
+
+        stats_text = (
+            f"📊 **Bot Statistics**\n\n"
+            f"👤 **Total Users (DMs):** {total_users}\n"
+            f"👥 **Total Groups:** {total_groups}\n"
+            f"📈 **Total Chats:** {total_users + total_groups}"
+        )
+
+        await msg.edit_text(stats_text, parse_mode=ParseMode.MARKDOWN)
+
+    except Exception as e:
+        logger.error(f"Error fetching stats: {e}")
+        await msg.edit_text("❌ Failed to fetch statistics.")
