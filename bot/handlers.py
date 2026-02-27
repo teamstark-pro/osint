@@ -1,5 +1,6 @@
 import logging
 import asyncio
+import io
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.constants import ParseMode, ChatType
 from telegram.ext import ContextTypes
@@ -330,3 +331,52 @@ async def cmd_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception as e:
         logger.error(f"Error fetching stats: {e}")
         await msg.edit_text("❌ Failed to fetch statistics.")
+
+async def cmd_groups(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    # Sirf Owner ko access milega
+    if update.effective_user.id != Config.OWNER_ID:
+        return await update.message.reply_text("⚠️ You are not authorized to use this command.")
+
+    msg = await update.message.reply_text("🔄 Fetching group links... (This might take a minute)")
+    groups = await db.get_all_groups()
+
+    if not groups:
+        return await msg.edit_text("❌ Bot is not in any groups yet.")
+
+    text_data = "🤖 **Bot Groups List:**\n\n"
+
+    for chat_id in groups:
+        try:
+            chat = await context.bot.get_chat(chat_id)
+            title = chat.title or "Unknown Group"
+            
+            # Link nikalne ka try karega
+            if chat.username:
+                link = f"https://t.me/{chat.username}" # Public group
+            elif chat.invite_link:
+                link = chat.invite_link # Agar pehle se link available hai
+            else:
+                # Agar private group hai toh link generate karne ka try karega
+                try:
+                    link = await context.bot.export_chat_invite_link(chat_id)
+                except Exception:
+                    link = "No Link (Bot needs admin rights to generate link)"
+
+            text_data += f"📌 **Name:** {title}\n🆔 **ID:** `{chat_id}`\n🔗 **Link:** {link}\n\n"
+            
+        except Exception as e:
+            text_data += f"📌 **ID:** `{chat_id}`\n⚠️ Error fetching details: {e}\n\n"
+
+    # Agar data chhota hai toh normal message
+    if len(text_data) < 4000:
+        await msg.edit_text(text_data, parse_mode=ParseMode.MARKDOWN, disable_web_page_preview=True)
+    else:
+        # Agar data lamba hai toh Text file bhej dega
+        text_data = text_data.replace("**", "").replace("`", "") # File ke liye markdown hata do
+        file_data = io.BytesIO(text_data.encode('utf-8'))
+        file_data.name = "groups_list.txt"
+        await update.message.reply_document(
+            document=file_data, 
+            caption="✅ Here is the list of all groups the bot is in."
+        )
+        await msg.delete()
