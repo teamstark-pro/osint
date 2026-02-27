@@ -80,10 +80,12 @@ async def check_fsub(update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool
     return True
 
 # --- Middleware: Check Group & Authorization ---
+# --- Middleware: Check Group & Authorization ---
 async def check_chat_auth(update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
     """
     Verifies if the bot is allowed to run in this chat.
-    BLOCKS Private DMs for normal users and ALLOWS ALL Groups.
+    BLOCKS Private DMs for normal users.
+    REQUIRES Groups to have at least 20 members.
     """
     chat_id = update.effective_chat.id
     user_id = update.effective_user.id
@@ -104,17 +106,34 @@ async def check_chat_auth(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             [InlineKeyboardButton("➕ Add to Group", url=f"https://t.me/{bot.username}?startgroup=true")]
         ]
         await update.message.reply_text(
-            "⚠️ **I don't work in DMs!**\n\nPlease add me to any group to use my commands.",
+            "⚠️ **I don't work in DMs!**\n\nPlease add me to a group with **at least 20 members** to use my commands.",
             reply_markup=InlineKeyboardMarkup(keyboard),
             parse_mode=ParseMode.MARKDOWN
         )
         return False
 
-    # 3. ALLOW ALL Groups & Supergroups
+    # 3. Handle Groups & Supergroups (Minimum 20 Members Logic)
     if chat_type in [ChatType.GROUP, ChatType.SUPERGROUP]:
-        await db.add_group(chat_id)
-        await db.add_user(user_id) # Log user even in group
-        return True
+        try:
+            # Check the number of members in the group
+            member_count = await context.bot.get_chat_member_count(chat_id)
+            
+            if member_count < 20:
+                await update.message.reply_text(
+                    f"⚠️ **Group too small!**\n\nI only work in groups with **at least 20 members**. Currently, this group has only {member_count} members.\n\nI am leaving this chat. Add me to a bigger group!",
+                    parse_mode=ParseMode.MARKDOWN
+                )
+                await context.bot.leave_chat(chat_id)
+                return False
+                
+            # If members >= 20, log group and user, then allow
+            await db.add_group(chat_id)
+            await db.add_user(user_id)
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error checking member count or leaving chat {chat_id}: {e}")
+            return False
 
     return False
 
